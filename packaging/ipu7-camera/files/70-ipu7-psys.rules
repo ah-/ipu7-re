@@ -1,0 +1,2 @@
+# Intel IPU7 PSYS (hardware ISP): accessible to the logged-in user like other cameras
+KERNEL=="ipu7-psys[0-9]*", GROUP="video", MODE="0660", TAG+="uaccess"

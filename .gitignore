@@ -1,0 +1,8 @@
+live2
+synth
+*.o
+# large raw captures, kept on disk only
+statdump/
+synthdump/
+dump-frame151/
+graphtool/listgraphs

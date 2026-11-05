@@ -1,0 +1,48 @@
+From e7ab739a05e5cee73076ffa7b92b0f4338467cfe Mon Sep 17 00:00:00 2001
+From: Andreas Heider <andreas@heider.io>
+Date: Thu, 5 Nov 2026 22:41:49 +0000
+Subject: [PATCH 5/5] pipeline: simple: leave IPU7 to the ipu7 handler when the
+ PSYS is usable
+
+The simple pipeline handler claims intel-ipu7 media devices to run the
+software ISP. When the IPU7 PSYS driver is loaded and accessible, the
+ipu7 handler drives the hardware ISP instead, so skip the device there
+and only fall back to the software ISP without PSYS.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/libcamera/pipeline/simple/simple.cpp | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/src/libcamera/pipeline/simple/simple.cpp b/src/libcamera/pipeline/simple/simple.cpp
+index e26f438d..fb49a6f2 100644
+--- a/src/libcamera/pipeline/simple/simple.cpp
++++ b/src/libcamera/pipeline/simple/simple.cpp
+@@ -16,6 +16,7 @@
+ #include <set>
+ #include <stdint.h>
+ #include <string.h>
++#include <unistd.h>
+ #include <string>
+ #include <unordered_map>
+ #include <utility>
+@@ -2027,6 +2028,16 @@ bool SimplePipelineHandler::match(DeviceEnumerator *enumerator)
+ 	std::shared_ptr<MediaDevice> media;
+ 
+ 	for (const SimplePipelineInfo &inf : supportedDevices) {
++		/*
++		 * IPU7 with a usable PSYS (hardware ISP) device is handled by the
++		 * ipu7 pipeline handler; only fall back to the software ISP when the
++		 * PSYS driver is absent.
++		 */
++		if (!strcmp(inf.driver, "intel-ipu7") && !access("/dev/ipu7-psys0", R_OK | W_OK)) {
++			LOG(SimplePipeline, Debug) << "IPU7 PSYS available, leaving IPU7 to the ipu7 handler";
++			continue;
++		}
++
+ 		DeviceMatch dm(inf.driver);
+ 		while ((media = acquireMediaDevice(enumerator, dm))) {
+ 			/*
+-- 
+2.56.0
+

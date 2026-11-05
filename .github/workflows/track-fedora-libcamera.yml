@@ -1,0 +1,28 @@
+# Follow Fedora's libcamera package: when the f45 dist-git branch moves, record the new commit.
+# The push triggers the COPR webhook, which rebuilds libcamera with the ipu7 patches on top.
+name: Track Fedora libcamera
+
+on:
+  schedule:
+    - cron: "17 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  track:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Update packaging/libcamera/fedora-commit
+        run: |
+          f=packaging/libcamera/fedora-commit
+          new=$(git ls-remote https://src.fedoraproject.org/rpms/libcamera.git refs/heads/f45 | cut -f1)
+          [ -n "$new" ] || { echo "could not read Fedora dist-git"; exit 1; }
+          if [ "$new" = "$(cat "$f")" ]; then echo "unchanged ($new)"; exit 0; fi
+          echo "$new" > "$f"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "libcamera: follow Fedora f45 dist-git ${new:0:12}" "$f"
+          git push
