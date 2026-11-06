@@ -16,7 +16,7 @@ echo "== install from COPR"
 dnf -y copr enable ahahah/ipu7-camera
 # the COPR libcamera (release N.ipu7.2+) replaces the local N.ipu7.1 build
 dnf -y --refresh install ipu7-camera
-dnf -y --refresh upgrade 'libcamera*' 'python3-libcamera'
+dnf -y --refresh upgrade $(rpm -qa --qf '%{NAME}\n' 'libcamera*' 'python3-libcamera' | sort -u)
 rpm -q libcamera libcamera-ipa ipu7-ptl-dkms ipu7-camera
 dkms status -m ipu7-ptl
 
