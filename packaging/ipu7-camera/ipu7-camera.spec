@@ -7,6 +7,7 @@ License:        LicenseRef-Intel-recorded-data AND MIT
 URL:            https://github.com/ah-/ipu7-re
 Source0:        %{name}-%{version}.tar.gz
 BuildArch:      noarch
+BuildRequires:  systemd-rpm-macros
 
 Requires:       ipu7-ptl-dkms
 # the ipu7 pipeline handler and IPA (built from this repo's packaging/libcamera)
