@@ -1,0 +1,44 @@
+From f3f25a9671c86334ec456dc2be567d71650e0495 Mon Sep 17 00:00:00 2001
+From: Davide Vitturini <mdvitturini@gmail.com>
+Date: Fri, 13 Nov 2026 12:35:27 +0100
+Subject: [PATCH] ipu7: only reset links of the handler's own CSI-2
+ receiver (do not sever the IR camera's CSI2 2 link)
+
+Assisted-by: Claude:claude-opus-5-5
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/libcamera/pipeline/ipu7/ipu7.cpp | 17 ++++++++++++++++-
+ 1 file changed, 16 insertions(+), 1 deletion(-)
+
+diff --git a/src/libcamera/pipeline/ipu7/ipu7.cpp b/src/libcamera/pipeline/ipu7/ipu7.cpp
+index 27cdbc3c..c877cced 100644
+--- a/src/libcamera/pipeline/ipu7/ipu7.cpp
++++ b/src/libcamera/pipeline/ipu7/ipu7.cpp
+@@ -804,8 +804,23 @@ bool PipelineHandlerIPU7::match(DeviceEnumerator *enumerator)
+ 	if (!media)
+ 		return false;
+ 
+-	if (media->disableLinks())
++	/*
++	 * Only reset the links of the CSI-2 receiver this handler uses: the
++	 * other receivers may feed cameras used outside libcamera (e.g. the
++	 * X1C14 IR camera on CSI2 2 -> ISYS Capture 16, read via raw V4L2).
++	 */
++	MediaEntity *csi2Entity = media->getEntityByName(kCsi2Name);
++	if (!csi2Entity)
+ 		return false;
++	for (MediaPad *pad : csi2Entity->pads()) {
++		if (!(pad->flags() & MEDIA_PAD_FL_SOURCE))
++			continue;
++		for (MediaLink *l : pad->links()) {
++			if ((l->flags() & MEDIA_LNK_FL_ENABLED) &&
++			    !(l->flags() & MEDIA_LNK_FL_IMMUTABLE) && l->setEnabled(false))
++				return false;
++		}
++	}
+ 	MediaLink *link = media->link(kCsi2Name, 1, kCaptureName, 0);
+ 	if (!link || link->setEnabled(true))
+ 		return false;
+-- 
+2.53.0
+

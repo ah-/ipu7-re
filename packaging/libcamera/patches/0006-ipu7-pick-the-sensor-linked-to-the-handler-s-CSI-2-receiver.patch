@@ -1,0 +1,45 @@
+From 52e424833f130a32b5bdf96a07bbeaad521b1b59 Mon Sep 17 00:00:00 2001
+From: Davide Vitturini <mdvitturini@gmail.com>
+Date: Fri, 13 Nov 2026 12:01:16 +0100
+Subject: [PATCH] ipu7: pick the sensor linked to the CSI-2 receiver used
+ by the handler (X1C14 has a second, IR, sensor)
+
+Assisted-by: Claude:claude-opus-5-5
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/libcamera/pipeline/ipu7/ipu7.cpp | 17 ++++++++++++++---
+ 1 file changed, 14 insertions(+), 3 deletions(-)
+
+diff --git a/src/libcamera/pipeline/ipu7/ipu7.cpp b/src/libcamera/pipeline/ipu7/ipu7.cpp
+index d9422ea6..27cdbc3c 100644
+--- a/src/libcamera/pipeline/ipu7/ipu7.cpp
++++ b/src/libcamera/pipeline/ipu7/ipu7.cpp
+@@ -244,11 +244,22 @@ CameraConfiguration::Status IPU7CameraConfiguration::validate()
+ int IPU7CameraData::init(MediaDevice *media)
+ {
+ 	MediaEntity *sensorEntity = nullptr;
++	/*
++	 * Pick the sensor linked to the CSI-2 receiver this handler drives
++	 * (kCsi2Name). Machines with a second (e.g. IR) sensor on another port
++	 * would otherwise get whichever sensor is enumerated first.
++	 */
+ 	for (MediaEntity *entity : media->entities()) {
+-		if (entity->function() == MEDIA_ENT_F_CAM_SENSOR) {
+-			sensorEntity = entity;
+-			break;
++		if (entity->function() != MEDIA_ENT_F_CAM_SENSOR)
++			continue;
++		for (MediaPad *pad : entity->pads()) {
++			for (MediaLink *link : pad->links()) {
++				if (link->sink()->entity()->name() == kCsi2Name)
++					sensorEntity = entity;
++			}
+ 		}
++		if (sensorEntity)
++			break;
+ 	}
+ 	if (!sensorEntity) {
+ 		LOG(IPU7, Debug) << "No sensor found";
+-- 
+2.53.0
+
